@@ -401,7 +401,8 @@ const DEMO = {
            m12:"Sweden",m13:"Draw",m14:"Draw",m15:"Draw",m16:"Draw",m17:"France",
            m18:"Norway",m19:"Argentina",m20:"Austria",m21:"Draw",m22:"England",
            m23:"Ghana",m24:"Colombia"},
-  totals: {Yogi:142,Irfan:142,Karu:132,Bhanu:132,Karan:132,Vishu:132,Arka:122,
+  // totals simulate Users!D — which ALREADY includes bonus points (Karan: 132 + 20 bonus)
+  totals: {Yogi:142,Irfan:142,Karu:132,Bhanu:132,Karan:152,Vishu:132,Arka:122,
            Rohith:122,Anurag:112,Avi:112,Vaishak:102,Mojo:102,Sayantan:102,
            Akshay:80,Coru:80,VB:70,Jeff:40},
   // --- bonus demo data (Preview only). Live data comes from your Bonus Results tab. ---
@@ -486,7 +487,7 @@ function demo(fn, a){
   }
   if (fn==='getLeaderboard'){
     const ctx=demoCtx();
-    const arr=DEMO.names.map(n=>({name:n,total:(DEMO.totals[n]||0)+demoBonusPoints(n),form:demoForm(n,ctx)}))
+    const arr=DEMO.names.map(n=>({name:n,total:(DEMO.totals[n]||0),form:demoForm(n,ctx)}))
       .sort((x,y)=>y.total-x.total);
     let rank=0, prev=null;
     arr.forEach((p,i)=>{ if(p.total!==prev){ rank=i+1; prev=p.total; } p.rank=rank; });
@@ -546,6 +547,7 @@ function demoStats(name,ctx){
     let same=0,tot=0; Object.keys(ctx.allP).forEach(u=>{ const pv=ctx.allP[u][m.id]; if(pv){tot++; if(pv===m.result)same++;} });
     const frac=tot?same/tot:1; if(!upset||frac<upset.frac) upset={a:m.a,b:m.b,pick:picks[m.id],same,tot,frac};
   });
+  if(upset && (upset.tot<4 || upset.frac>=0.5)) upset=null;
   return {predicted:n,correct,accuracy:n?Math.round(correct/n*100):0,currentStreak:curStreak,currentType:curType,
           longestWin:longW,longestLoss:longL,bonusCorrect,bonusAnswered,upset};
 }
@@ -567,7 +569,8 @@ function demoGroup(ctx){
   let blindspot=null;
   ctx.sched.forEach(m=>{ if(!m.result)return; let tot=0,right=0;
     names.forEach(u=>{ const pv=ctx.allP[u][m.id]; if(pv){tot++; if(pv===m.result)right++;} });
-    if(tot>=3){ const frac=right/tot; if(!blindspot||frac<blindspot.frac) blindspot={a:m.a,b:m.b,result:m.result,right,tot,frac}; } });
+    if(tot>=4){ const frac=right/tot; if(!blindspot||frac<blindspot.frac) blindspot={a:m.a,b:m.b,result:m.result,right,tot,frac}; } });
+  if(blindspot && blindspot.frac>=0.5) blindspot=null;
   return {players:names.length,longestWin:top('longestWin'),longestLoss:top('longestLoss'),
           hottest:hottest(),bestAccuracy:bestAccuracy(),mostBonus:top('bonusCorrect'),blindspot};
 }
@@ -939,10 +942,10 @@ async function openInsights(){
       + tile(s.longestLoss,'Longest loss streak','loss')
       + tile(s.bonusCorrect+' / '+s.bonusAnswered,'Bonus correct','gold')
       + '</div>';
-    if(s.upset && s.upset.tot>0){
-      html+=`<div class="factcard">🎯 <b>Biggest upset called:</b> you backed
-        <b>${s.upset.pick}</b> in ${s.upset.a} v ${s.upset.b} — only
-        ${s.upset.same} of ${s.upset.tot} got that right.</div>`;
+    if(s.upset){
+      html+=`<div class="factcard">🎯 <b>Boldest correct call:</b> you backed
+        <b>${s.upset.pick}</b> in ${s.upset.a} v ${s.upset.b} when only
+        ${s.upset.same} of ${s.upset.tot} players did.</div>`;
     }
     if(!s.predicted){
       html+=`<div class="factcard" style="border-color:var(--edge)">No decided predictions yet —
@@ -958,9 +961,9 @@ async function openInsights(){
       html+=grouprow((g.hottest.value||0)+(g.hottest.value?' W':''), 'Hottest right now', holders(g.hottest.holders), 'win');
       html+=grouprow(g.bestAccuracy.value+'%', 'Best accuracy (3+ picks)', holders(g.bestAccuracy.holders), '');
       html+=grouprow(g.mostBonus.value, 'Most bonus correct', holders(g.mostBonus.holders), 'gold');
-      if(g.blindspot && g.blindspot.tot>0){
+      if(g.blindspot){
         html+=`<div class="factcard">🙈 <b>Group blind spot:</b> ${g.blindspot.a} v ${g.blindspot.b}
-          ended <b>${g.blindspot.result}</b> — only ${g.blindspot.right} of ${g.blindspot.tot} called it.</div>`;
+          ended <b>${g.blindspot.result}</b>, but only ${g.blindspot.right} of ${g.blindspot.tot} called it.</div>`;
       }
     }
 
