@@ -141,7 +141,6 @@
   .bcard .deadline{font-size:11px;color:var(--mute);font-weight:600}
   .ktime{font-size:11px;color:var(--mute);font-weight:700}
   .ktime b{color:var(--chalk);font-weight:700}
-  .ktime .ist{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--gold);margin-left:3px}
   .outcome{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
            padding:2px 7px;border-radius:999px}
   .outcome.hit{background:#06351f;color:var(--ok)}
@@ -591,16 +590,17 @@ function toast(msg, err){
   const t=$('#toast'); t.textContent=msg; t.className='toast show'+(err?' err':'');
   clearTimeout(toastT); toastT=setTimeout(()=>t.className='toast',2200);
 }
-// iso is naive IST wall-clock "YYYY-MM-DDTHH:MM:SS". Pin it to IST (+05:30) and
-// always format in Asia/Kolkata so the displayed time is IST for every viewer.
+// Fixture times are stored as naive IST wall-clock strings ("YYYY-MM-DDTHH:MM:SS").
+// Parse them once against IST, then let the browser format date/time in the viewer's
+// local timezone so day, date, and kickoff time stay consistent for that user.
 function istDate(iso){ return new Date(iso + '+05:30'); }
 function fmtDay(iso){
   return istDate(iso).toLocaleDateString('en-GB',
-    {weekday:'short',day:'numeric',month:'short',timeZone:'Asia/Kolkata'});
+    {weekday:'short',day:'numeric',month:'short'});
 }
 function fmtTime(iso){
   return istDate(iso).toLocaleTimeString('en-US',
-    {hour:'numeric',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'});
+    {hour:'numeric',minute:'2-digit',hour12:true});
 }
 
 /* ---- boot ---- */
@@ -659,7 +659,7 @@ function currentTab(){
   return b?b.dataset.tab:'upcoming';
 }
 
-/* a match is locked the moment its IST kickoff has passed (live, not a snapshot) */
+/* a match is locked the moment its kickoff has passed (live, not a snapshot) */
 function isLocked(m){ return istDate(m.iso).getTime() <= Date.now(); }
 function bonusLocked(b){
   if(b.linkedMatchId){
@@ -702,7 +702,7 @@ function renderTab(which){
   if(!list.length){
     host.innerHTML = which==='upcoming'
       ? `<div class="empty"><div class="big">Nothing open right now</div>
-         Every fixture has kicked off. A match stays open for predictions until its IST
+         Every fixture has kicked off. A match stays open for predictions until its
          kickoff, then moves to <b>Past</b>.</div>`
       : `<div class="empty"><div class="big">No completed matches</div>
          Matches appear here once they kick off.</div>`;
@@ -741,7 +741,7 @@ function card(m, editable){
               <span class="tag">${tag}</span><span class="team">${label}</span></button>`;
   };
 
-  let right = `<span class="ktime"><b>${fmtTime(m.iso)}</b> <span class="ist">IST</span></span>`;
+  let right = `<span class="ktime"><b>${fmtTime(m.iso)}</b></span>`;
   if(!editable){
     let outcome='';
     if(res && cur){ outcome = (cur===res)
@@ -866,7 +866,7 @@ function renderBonusTab(){
     const locked=bonusLocked(b);
     const el=document.createElement('div'); el.className='bcard';
     const when = b.deadlineIso
-      ? `<span class="deadline">Closes ${fmtDay(b.deadlineIso)}, ${fmtTime(b.deadlineIso)} IST</span>` : '';
+      ? `<span class="deadline">Closes ${fmtDay(b.deadlineIso)}, ${fmtTime(b.deadlineIso)}</span>` : '';
     el.innerHTML=`
       <div class="meta">
         <span class="mid">${b.id.toUpperCase()}</span>
